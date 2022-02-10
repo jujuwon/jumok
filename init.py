@@ -1,9 +1,7 @@
-from cProfile import label
-from msilib.schema import Class
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QDialog
 from PyQt5.QtGui import QIcon
-from PyQt5 import QtGui, uic
+from PyQt5 import QtCore, uic
 from game import Game
 
 main_window = uic.loadUiType("./initWindow.ui")[0]
@@ -29,6 +27,9 @@ class MultiDialog(QDialog):
 
 
 class InitWindow(QMainWindow, main_window):
+
+    command = QtCore.pyqtSignal(str, str)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -38,18 +39,19 @@ class InitWindow(QMainWindow, main_window):
                 
     def btnSp_clicked(self):
         QMessageBox.information(self, "Single Play", "준비 중인 기능입니다.")
-        
+
+    @QtCore.pyqtSlot()        
     def btnMp_clicked(self):
         dlg = MultiDialog(self)
         r = dlg.showModal()
-        
+
         if r:
             ip = dlg.editIp.text()
             port = dlg.editPort.text()
             self.label.setText(f'{ip}:{port}')
-            game = Game(self)
-            
-             
+            game = Game(self)            
+            self.command.emit(ip, port)
+    
 
 if __name__ == '__main__':
    app = QApplication(sys.argv)
