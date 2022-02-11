@@ -5,7 +5,7 @@ from PyQt5 import QtCore, uic
 from PyQt5.QtGui import *
 from PyQt5.QtCore import QSize
 
-game_window = uic.loadUiType("./gameWindow.ui")[0]
+# game_window = uic.loadUiType("./gameWindow.ui")[0]
 
 class Game(QMainWindow):
 
@@ -15,12 +15,22 @@ class Game(QMainWindow):
         game_window = "gameWindow.ui"
         uic.loadUi(game_window, self)
         
+        # for test
+        self.ip = "localhost"
+        self.port = "1234"
+        
         pixmap = QPixmap()
         pixmap.load('./images/board.png')
+        pixmap = pixmap.scaledToWidth(800)
+        pixmap = pixmap.scaledToHeight(800)
         self.boardLabel.setPixmap(pixmap)
         parent.command.connect(self.recvData)
+        #self.label_test.clicked.connect(self.label_test_clicked)
 
         self.show()
+        
+    # def label_test_clicked(self):
+    #     self.label_test.setText("Test")
 
     @QtCore.pyqtSlot(str, str)
     def recvData(self, ip, port):
@@ -36,8 +46,8 @@ class Game(QMainWindow):
         print(ret)
         if ret: # success connect
             self.statusLabel.setText("Success Connection\nwaiting for game to start")
-            self.gomoku.ready()
-            self.run()
+            # self.gomoku.ready()
+            # self.run()
         else:   # fail connect
             print("failed connection")
 
@@ -49,3 +59,7 @@ class Game(QMainWindow):
         if command == 4: # end 명령
             pass
 
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    game = Game()
+    sys.exit(app.exec_())

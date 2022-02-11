@@ -42,15 +42,22 @@ class InitWindow(QMainWindow, main_window):
 
     @QtCore.pyqtSlot()        
     def btnMp_clicked(self):
-        dlg = MultiDialog(self)
-        r = dlg.showModal()
+        # for test
+        ip = "localhost"
+        port = "1234"
+        game = Game(self)
+        self.command.emit(ip, port)
+        
+        # for real
+        # dlg = MultiDialog(self)
+        # r = dlg.showModal()
 
-        if r:
-            ip = dlg.editIp.text()
-            port = dlg.editPort.text()
-            self.label.setText(f'{ip}:{port}')
-            game = Game(self)            
-            self.command.emit(ip, port)
+        # if r:
+        #     ip = dlg.editIp.text()
+        #     port = dlg.editPort.text()
+        #     self.label.setText(f'{ip}:{port}')
+        #     game = Game(self)            
+        #     self.command.emit(ip, port)
     
 
 if __name__ == '__main__':
