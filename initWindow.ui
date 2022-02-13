@@ -57,7 +57,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>오목 게임 by juju</string>
+        <string>오목 게임 by juwon</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

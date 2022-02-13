@@ -80,7 +80,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>powered by juju</string>
+     <string>powered by juwon</string>
     </property>
    </widget>
    <widget class="QLabel" name="addrLabel">
