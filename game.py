@@ -188,7 +188,9 @@ class Game(QMainWindow):
                 self.statusLabel.setText("준비 패킷 전송실패")
         
     # 사용자 돌 클릭 slot
-    def map_clicked(self, x, y):
+    def map_clicked(self, i, j):
+        x = i + 1
+        y = j + 1
         self.gomoku.put(x, y)
         # 사용자가 흑돌이면
         if self.MY_COLOR == BLACK:
@@ -201,7 +203,9 @@ class Game(QMainWindow):
     
     # 렌더링 slot
     @QtCore.pyqtSlot(int, int, int)
-    def reader_slot(self, x, y, color):
+    def reader_slot(self, i, j, color):
+        x = i - 1
+        y = j - 1
         if self.FIRST:
             if color == BLACK: # 검은색    
                 self.mapLabel[x][y].setPixmap(self.pixmapBlackLast)
