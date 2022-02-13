@@ -1,7 +1,6 @@
 from socket import *
 from typing import Tuple
 import sys
-print = sys.stdout.write
 
 class Gomoku:
 
@@ -23,7 +22,8 @@ class Gomoku:
 
 
     def __del__(self):
-        self.socket.close()
+        if self.socket:
+            self.socket.close()
 
 
     def recv(self) -> Tuple[bytes, bytes, bytes]:
