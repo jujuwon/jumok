@@ -4,6 +4,9 @@ from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, uic
 from game import Game
 
+BLACK = 1
+WHITE = 2
+
 main_window = uic.loadUiType("./initWindow.ui")[0]
 
 class MultiDialog(QDialog):
@@ -24,11 +27,31 @@ class MultiDialog(QDialog):
         
     def showModal(self):
         return super().exec_()
+    
+class SingleDialog(QDialog):
+    def __init__(self, parent):
+        super(SingleDialog, self).__init__(parent)
+        dialog_ui = "spDialog.ui"
+        uic.loadUi(dialog_ui, self)
+        self.btnConnect.clicked.connect(self.btnConnect_clicked)
+        self.btnCancel.clicked.connect(self.btnCancel_clicked)
+        
+        self.show()
+        
+    def btnConnect_clicked(self):
+        self.accept()
+    
+    def btnCancel_clicked(self):
+        self.reject()
+        
+    def showModal(self):
+        return super().exec_()
 
 
 class InitWindow(QMainWindow, main_window):
 
-    command = QtCore.pyqtSignal(str, str)
+    single = QtCore.pyqtSignal(int) 
+    multi = QtCore.pyqtSignal(str, str, str)
 
     def __init__(self):
         super().__init__()
@@ -37,16 +60,33 @@ class InitWindow(QMainWindow, main_window):
         self.btnMp.clicked.connect(self.btnMp_clicked)
         self.show()
                 
+    @QtCore.pyqtSlot()                        
     def btnSp_clicked(self):
-        QMessageBox.information(self, "Single Play", "준비 중인 기능입니다.")
+        # for test
+        order = 1
+        game = Game(self)
+        self.single.emit(order)
+        
+        # for real
+        # dlg = MultiDialog(self)
+        # r = dlg.showModal()
+
+        # if r:
+        #     name = dlg.editName.text()
+        #     ip = dlg.editIp.text()
+        #     port = dlg.editPort.text()
+        #     self.label.setText(f'{ip}:{port}')
+        #     game = Game(self)            
+        #     self.multi.emit(name, ip, port)
 
     @QtCore.pyqtSlot()        
     def btnMp_clicked(self):
         # for test
+        name = "juju"
         ip = "localhost"
         port = "1234"
         game = Game(self)
-        self.command.emit(ip, port)
+        self.multi.emit(name, ip, port)
         
         # for real
         # dlg = MultiDialog(self)
@@ -57,7 +97,7 @@ class InitWindow(QMainWindow, main_window):
         #     port = dlg.editPort.text()
         #     self.label.setText(f'{ip}:{port}')
         #     game = Game(self)            
-        #     self.command.emit(ip, port)
+        #     self.multi.emit(ip, port)
     
 
 if __name__ == '__main__':
