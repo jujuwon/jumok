@@ -33,16 +33,18 @@
    <widget class="QLabel" name="timeLabel">
     <property name="geometry">
      <rect>
-      <x>900</x>
+      <x>1000</x>
       <y>80</y>
-      <width>281</width>
+      <width>181</width>
       <height>91</height>
      </rect>
     </property>
     <property name="font">
      <font>
       <family>Sans Serif</family>
-      <pointsize>20</pointsize>
+      <pointsize>24</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -56,9 +58,9 @@
     <property name="geometry">
      <rect>
       <x>900</x>
-      <y>350</y>
+      <y>450</y>
       <width>281</width>
-      <height>501</height>
+      <height>401</height>
      </rect>
     </property>
     <property name="font">
@@ -105,7 +107,7 @@
     <property name="geometry">
      <rect>
       <x>900</x>
-      <y>290</y>
+      <y>390</y>
       <width>281</width>
       <height>41</height>
      </rect>
@@ -6089,6 +6091,83 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
+   <widget class="QLabel" name="timeLabel_2">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>80</y>
+      <width>91</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Sans Serif</family>
+      <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>제한시간</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="rbGroup">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>290</y>
+      <width>281</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>GroupBox</string>
+    </property>
+    <widget class="QRadioButton" name="personRb">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>30</y>
+       <width>108</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>직접두기</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="aiRb">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>30</y>
+       <width>108</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>AI로 두기</string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -6096,7 +6175,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

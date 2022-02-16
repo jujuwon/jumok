@@ -6,6 +6,8 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 import threading
 import time
+from jconst import *
+from player import ChoiceOfPlayer
 
 CMD_CONNECT = 0
 CMD_READY = 1
@@ -13,9 +15,15 @@ CMD_UPDATE = 2
 CMD_PUT = 3
 CMD_END = 4
 
-BLANK = -1
-BLACK = 0
-WHITE = 1
+TIME_STOP = 0
+TIME_START = 1
+
+PERSON = 0
+AI = 1
+
+BLANK = 0
+BLACK = 1
+WHITE = 2
 
 gomoku_map = [[-1 for _ in range(15)] for _ in range(15)]
 
@@ -47,11 +55,13 @@ class Game(QMainWindow):
     OTHER_COLOR = WHITE
     READY = False
     INIT = True
-    DONE = False
+    GAME_DONE = False
+    TIME_DONE = False
     FIRST = True
     
     put_signal = QtCore.pyqtSignal(int, int, int)
     end_signal = QtCore.pyqtSignal(str)
+    time_signal = QtCore.pyqtSignal(int)
 
     def __init__(self, parent):
         super(Game, self).__init__(parent)
@@ -123,11 +133,22 @@ class Game(QMainWindow):
         self.btnReady.clicked.connect(self.btnReady_clicked)
         self.put_signal.connect(self.reader_slot)
         self.end_signal.connect(self.end_slot)
+        self.time_signal.connect(self.timer_slot)
+        self.personRb.clicked.connect(self.selectRadioSlot)
+        self.aiRb.clicked.connect(self.selectRadioSlot)
         #self.label_test.clicked.connect(self.label_test_clicked)
         
         # 쓰레드
         self.network = threading.Thread(target=self.networkThread)
+        self.timer = threading.Thread(target=self.timerThread)
         self.show()
+        
+    # 라디오버튼 클릭 slot
+    def selectRadioSlot(self):
+        if self.personRb.isChecked():
+            self.player_type = PERSON
+        else:
+            self.player_type = AI
         
     # 싱글플레이 slot
     @QtCore.pyqtSlot(int)
@@ -160,10 +181,19 @@ class Game(QMainWindow):
     # gomoku 서버 첫 연결 
     def connectSocket(self):
         self.statusLabel.setText("연결 중")
-        self.gomoku = Gomoku(self.ip, int(self.port), True)
-        ret = self.gomoku.connect()
-        if ret: # success connect
+        self.gomoku = Gomoku(self.ip, int(self.port), False)
+        ret_tuple = self.gomoku.connect()
+        success, command, turn, data = ret_tuple
+        if ret_tuple: # success connect
             self.statusLabel.setText("연결 성공")
+            if turn == 0:
+                self.MY_COLOR = BLACK
+                self.OTHER_COLOR = WHITE
+                self.is_black = True
+            else:
+                self.MY_COLOR = WHITE
+                self.OTHER_COLOR = BLACK
+                self.is_black = False
         else:   # fail connect
             self.statusLabel.setText("연결 패킷 전송실패")
             
@@ -179,10 +209,10 @@ class Game(QMainWindow):
         else:
             ret = self.gomoku.ready() # 준비
             if ret:
+                self.player = ChoiceOfPlayer(gomoku_map, self.player_type, self.is_black, self)
                 self.statusLabel.setText("준비완료\n게임시작을 기다리는 중")
                 self.READY = True
                 # 쓰레드 시작
-                print("start: network thread")
                 self.network.start()
             else:
                 self.statusLabel.setText("준비 패킷 전송실패")
@@ -233,24 +263,25 @@ class Game(QMainWindow):
         
     # 통신 쓰레드
     def networkThread(self):
-        while not self.DONE:
+        while not self.GAME_DONE:
             print("waiting for packet from server...")
             # 첫 update 명령
             # update 받아서 색상 수신
             if self.INIT: 
+                self.timer.start()
                 ret_tuple = self.gomoku.update_or_end()
                 success, command, turn, data = ret_tuple    # bool, int, int, bytes 형태, 맨 첫 변수는 성공 실패 유무
                 if command == CMD_UPDATE: # update 명령
                     print("update: init")
                     if turn == 0:
-                        self.MY_COLOR = BLACK
-                        self.OTHER_COLOR = WHITE
+                        # self.MY_COLOR = BLACK
+                        # self.OTHER_COLOR = WHITE
                         self.blackLabel.setText(self.name)
                         self.whiteLabel.setText("상대방")
                         self.statusLabel.setText("게임 시작")
                     else:
-                        self.MY_COLOR = WHITE
-                        self.OTHER_COLOR = BLACK
+                        # self.MY_COLOR = WHITE
+                        # self.OTHER_COLOR = BLACK
                         self.blackLabel.setText("상대방")
                         self.whiteLabel.setText(self.name)
                         self.statusLabel.setText("게임 시작")
@@ -258,6 +289,7 @@ class Game(QMainWindow):
             else:
                 ret_tuple = self.gomoku.update_or_end()
                 success, command, turn, data = ret_tuple    # bool, int, int, bytes 형태, 맨 첫 변수는 성공 실패 유무
+                self.time_signal.emit(TIME_START)
                 if command == CMD_UPDATE: # update 명령
                     x = int((data & 0b11110000) >> 4)
                     y = int(data & 0b00001111)
@@ -279,8 +311,8 @@ class Game(QMainWindow):
                             gomoku_map[x][y] = WHITE # 하얀 돌 두기
                         #     self.put_signal.emit(x, y, WHITE)
                 if command == CMD_END: # end 명령
-                    print("end")
-                    self.DONE = True
+                    self.time_signal.emit(TIME_STOP)
+                    self.GAME_DONE = True
                     if turn == 0: # 패배
                         if data == 0: # 오류(금수 등)로 인해
                             self.end_signal.emit("패배 (금수 등 오류 발생)")
@@ -311,6 +343,25 @@ class Game(QMainWindow):
                                 gomoku_map[x][y] = WHITE # 하얀 돌 두기
                                 self.put_signal.emit(x, y, WHITE)
                             self.end_signal.emit("승리 (오목 완성)")
+                            
+    def timerThread(self):
+        self.t = 15
+        while not self.TIME_DONE:
+            time.sleep(1)
+            if self.t <= 0:
+                continue
+            self.timeLabel.setText(str(self.t))
+            self.t -= 1
+        
+    # 타이머 slot
+    @QtCore.pyqtSlot(int)
+    def timer_slot(self, flag):
+        self.t = 15
+        if flag == TIME_STOP:
+            self.TIME_DONE = True
+        else:
+            self.TIME_DONE = False
+            
     
 
 if __name__ == '__main__':
