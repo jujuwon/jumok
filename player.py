@@ -33,9 +33,8 @@ class ChoiceOfPlayer(QtCore.QThread):
 
     def run(self):
         while(1):
-            print("player->run->while")
             time.sleep(0.5)
-            print(f'self.my_is_black {self.my_is_black}, self.is_black {self.is_black}')
+            # print(f'self.my_is_black {self.my_is_black}, self.is_black {self.is_black}')
 
             if self.my_is_black == self.is_black:
                 # if self.my_is_black == True:
@@ -44,22 +43,23 @@ class ChoiceOfPlayer(QtCore.QThread):
                 #     self.parent.mouse_point.setPixmap(self.parent.white)
                 not_empty = True
                 while(not_empty):
-                    print("player->run->while->while")
+                    print("MINMAX 계산중 ...")
                     #print("my_is_black:" + str(self.my_is_black))
                     i,j = self.Player.Go(self.parent.gomoku_map,self.is_black,self.parent)
                     
                     if not i is None and not j is None:
                         if self.parent.gomoku_map.get_xy_on_logic_state(i,j) == EMPTY:
-                            print('not_empty FALSE')    
                             not_empty = False
 
                 print(f'i : {i} j: {j}')
-                if self.my_is_black == True:
-                    self.parent.put_signal.emit(i, j, BLACK)
-                else:
-                    self.parent.put_signal.emit(i, j, WHITE)
-                self.parent.gomoku.put(i, j)
-                self.finishSignal.emit(i, j)
+                # if self.my_is_black == True:
+                #     self.parent.render_signal.emit(i, j, BLACK)
+                # else:
+                #     self.parent.render_signal.emit(i, j, WHITE)
+                x = int(i) + 1
+                y = int(j) + 1
+                self.parent.gomoku.put(x, y)
+                # self.finishSignal.emit(i, j)
                 # is_black 이랑 my_is_black 이 다르게 만들어줌
                 # 같아지면 ai 동작?
                 self.is_black = not self.is_black

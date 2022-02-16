@@ -173,9 +173,11 @@ def someone_win(x_idx, y_idx, color_id):
             if candidate[i] == color_id:
                 length += 1
             else:
-                length_list.append(length)
-                length = 0
-        
+                if length:
+                    length_list.append(length)
+                    length = 0
+        if length:
+            length_list.append(length)
         if color_id == BLACK:
             try:
                 id = length_list.index(5)
@@ -189,26 +191,37 @@ def someone_win(x_idx, y_idx, color_id):
     return False
 
 
+def full():
+    for i in range(15):
+        for j in range(15):
+            if gomoku_map[i][j] == -1:
+                return False
+    return True
+
+
 def put(color_id, x, y):
 
     x_idx = x-1
     y_idx = y-1
 
     if not(0 < x < 16 and 0 < y < 16) :
-        return 1
+        return [1, x, y]
 
     if gomoku_map[x_idx][y_idx] != -1:
-        return 1
+        return [1, x, y]
 
     gomoku_map[x_idx][y_idx] = color_id
 
     if find_cannot_place(x_idx, y_idx, color_id):
-        return 1
+        return [1, x, y]
 
     if someone_win(x_idx, y_idx, color_id):
-        return 2
+        return [2, x, y]
     
-    return 0
+    if full():
+        return [4, x, y]
+
+    return [0, x, y]
 
 
 def make_bytes(cmd: int, turn: int, data: int):
@@ -227,7 +240,7 @@ signal.signal(signal.SIGINT, handler)
 
 
 if len(sys.argv) != 1:
-    serverPort = sys.argv[1]
+    serverPort = int(sys.argv[1])
 else:
     serverPort = 1234
 
@@ -374,14 +387,14 @@ while True:
                         x = data >> 4
                         y = data & 0b00001111
                         if math.floor(end - start) >= 15:
-                            ret = 3
+                            ret = (3,)
                         else:
                             ret = put(color_status[id], x, y)
                         
                         if math.floor(end - start) < 3:
                             time.sleep(3 - (end - start))
                         
-                        if ret == 1:    # error
+                        if ret[0] == 1:    # error
                             data_id = make_bytes(CMD_END, 0, 0)
                             data_not_id = make_bytes(CMD_END, 1, 0)
                             connectionSocket_list[id].send(data_id)
@@ -395,10 +408,11 @@ while True:
                             ready_status = [0, 0]
                             turn_status = [0, 0]
                             gomoku_map = [[-1 for _ in range(15)] for _ in range(15)]
+                            print("last point:", "[{}, {}]".format(ret[1], ret[2]))
                             print("Stone Count : ", stone_cnt)
                             stone_cnt = 0
 
-                        elif ret == 2:  # win
+                        elif ret[0] == 2:  # win
                             data_not_id = make_bytes(CMD_END, 0, data)
                             data_id = make_bytes(CMD_END, 1, data)
                             connectionSocket_list[id].send(data_id)
@@ -412,10 +426,11 @@ while True:
                             ready_status = [0, 0]
                             turn_status = [0, 0]
                             gomoku_map = [[-1 for _ in range(15)] for _ in range(15)]
+                            print("last point:", "[{}, {}]".format(ret[1], ret[2]))
                             print("Stone Count : ", stone_cnt)
                             stone_cnt = 0
 
-                        elif ret == 3:  # time out
+                        elif ret[0] == 3:  # time out
                             data_id = make_bytes(CMD_END, 0, 1)
                             data_not_id = make_bytes(CMD_END, 1, 1)
                             connectionSocket_list[id].send(data_id)
@@ -429,6 +444,24 @@ while True:
                             ready_status = [0, 0]
                             turn_status = [0, 0]
                             gomoku_map = [[-1 for _ in range(15)] for _ in range(15)]
+                            print("Stone Count : ", stone_cnt)
+                            stone_cnt = 0
+                        
+                        elif ret[0] == 4:  # draw
+                            data_id = make_bytes(CMD_END, 0, 2)
+                            data_not_id = make_bytes(CMD_END, 0, 2)
+                            connectionSocket_list[id].send(data_id)
+                            connectionSocket_list[int(not id)].send(data_not_id)
+                            for sock in connectionSocket_list:
+                                print("connection closed because end(draw)", sock.getsockname(), sock.getpeername())
+                                sock.close()
+                                input_list.remove(sock)
+                            connectionSocket_list = []
+                            is_start = False
+                            ready_status = [0, 0]
+                            turn_status = [0, 0]
+                            gomoku_map = [[-1 for _ in range(15)] for _ in range(15)]
+                            print("last point:", "[{}, {}]".format(ret[1], ret[2]))
                             print("Stone Count : ", stone_cnt)
                             stone_cnt = 0
 

@@ -60,11 +60,11 @@ class Game(QMainWindow):
     TIME_DONE = False
     FIRST = True
     
-    put_signal = QtCore.pyqtSignal(int, int, int)
-    ai_put_signal = QtCore.pyqtSignal(int, int)
+    render_signal = QtCore.pyqtSignal(int, int, int)
+    ai_render_signal = QtCore.pyqtSignal(int, int)
     end_signal = QtCore.pyqtSignal(str)
     time_signal = QtCore.pyqtSignal(int)
-    other_put_signal = QtCore.pyqtSignal(int, int)
+    other_render_signal = QtCore.pyqtSignal(int, int)
 
     def __init__(self, parent):
         super(Game, self).__init__(parent)
@@ -136,13 +136,13 @@ class Game(QMainWindow):
         parent.multi.connect(self.multiPlaySlot)
         parent.single.connect(self.singlePlaySlot)
         self.btnReady.clicked.connect(self.btnReady_clicked)
-        self.put_signal.connect(self.reader_slot)
+        self.render_signal.connect(self.reader_slot)
         self.end_signal.connect(self.end_slot)
         self.time_signal.connect(self.timer_slot)
         self.personRb.clicked.connect(self.selectRadioSlot)
         self.aiRb.clicked.connect(self.selectRadioSlot)
-        self.other_put_signal.connect(self.recvOtherPut)
-        # self.ai_put_signal.connect(self.map_clicked)
+        self.other_render_signal.connect(self.recvOtherPut)
+        # self.ai_render_signal.connect(self.map_clicked)
         #self.label_test.clicked.connect(self.label_test_clicked)
         
         # 쓰레드
@@ -190,7 +190,7 @@ class Game(QMainWindow):
         self.statusLabel.setText("연결 중")
         self.gomoku = Gomoku(self.ip, int(self.port), False)
         ret = self.gomoku.connect()
-        
+                    
         if ret: # success connect
             self.statusLabel.setText("연결 성공")
         else:   # fail connect
@@ -225,12 +225,12 @@ class Game(QMainWindow):
         if self.MY_COLOR == BLACK:
             #self.gomoku_map.draw_xy(x, y, BLACK)
             self.gomoku_map.draw_xy(x, y, BLACK)
-            self.put_signal.emit(x, y, BLACK)
+            self.render_signal.emit(x, y, BLACK)
         # 사용자가 백돌이면
         else:
             #self.gomoku_map.draw_xy(x, y, WHITE)
             self.gomoku_map.draw_xy(x, y, WHITE)
-            self.put_signal.emit(x, y, WHITE)
+            self.render_signal.emit(x, y, WHITE)
 
     def recvOtherPut(self, x, y):
         self.otherX = x
@@ -239,30 +239,32 @@ class Game(QMainWindow):
     
     # 렌더링 slot
     @QtCore.pyqtSlot(int, int, int)
-    def reader_slot(self, i, j, color):
-        x = i - 1
-        y = j - 1
+    def reader_slot(self, x, y, color):
         if self.FIRST:
-            if color == BLACK: # 검은색    
-                self.gomoku_map.draw_xy(i, j, BLACK)
+            if color == BLACK: # 검은돌 그리기  
+                # self.gomoku_map.draw_xy(x, y, BLACK)
                 self.mapLabel[x][y].setPixmap(self.pixmapBlackLast)
-            else: # 하얀색
-                self.gomoku_map.draw_xy(i, j, WHITE)
+                # self.is_black_do = False
+            else: # 하얀돌 그리기
+                # self.gomoku_map.draw_xy(x, y, WHITE)
                 self.mapLabel[x][y].setPixmap(self.pixmapWhiteLast)
+                # self.is_black_do = True
             # 직전 돌 저장
             self.beforeX, self.beforeY = x, y
             self.FIRST = False
         else:
-            if color == BLACK: # 검은색
-                # 직전 돌 초기화
+            if color == BLACK: # 검은돌
+                # 직전 하얀 돌 last -> 그냥 하얀돌로
                 self.mapLabel[self.beforeX][self.beforeY].setPixmap(self.pixmapWhite)
-                self.gomoku_map.draw_xy(i, j, BLACK)
+                # self.gomoku_map.draw_xy(x, y, BLACK)
                 self.mapLabel[x][y].setPixmap(self.pixmapBlackLast)
+                # self.is_black_do = False
             else: # 하얀색
                 # 직전 돌 초기화
                 self.mapLabel[self.beforeX][self.beforeY].setPixmap(self.pixmapBlack)
-                self.gomoku_map.draw_xy(i, j, WHITE)
+                # self.gomoku_map.draw_xy(x, y, WHITE)
                 self.mapLabel[x][y].setPixmap(self.pixmapWhiteLast)
+                # self.is_black_do = True
             # 직전 돌 저장
             self.beforeX, self.beforeY = x, y
         
@@ -274,102 +276,117 @@ class Game(QMainWindow):
     # 통신 쓰레드
     def networkThread(self):
         while not self.GAME_DONE:
-            print("waiting for packet from server...")
-            # 첫 update 명령
-            # update 받아서 색상 수신
+            # init
             if self.INIT: 
                 self.timer.start()
                 ret_tuple = self.gomoku.update_or_end()
-                success, command, turn, data = ret_tuple    # bool, int, int, bytes 형태, 맨 첫 변수는 성공 실패 유무
+                success, command, turn, data = ret_tuple
                 if command == CMD_UPDATE: # update 명령
                     print("update: init")
-                    self.MY_COLOR = BLACK
+                    # 내가 검은색 돌
                     if turn == 0:
+                        self.MY_COLOR = BLACK
                         self.OTHER_COLOR = WHITE
                         
-                        self.is_black = True
+                        # 내가 검은색돌이고 AI 일 때
                         if self.player_type == AI:
-                            print("AI 의 첫 수")
-                            self.player = ChoiceOfPlayer(self.gomoku_map, self.player_type, self.is_black, self)
-                            self.player.is_black = True
+                            # self.player.is_black = True
+                            self.player = ChoiceOfPlayer(self.gomoku_map, self.player_type, True, self)
+
                             self.player.finishSignal.connect(self.AI_draw)
                             if self.step<2:
-                                print("player start")
                                 self.player.start()
-                        self.other_player_type = PERSON
-                        self.other_player = ChoiceOfPlayer(self.gomoku_map, self.other_player_type, False, self)
-                        self.other_player.is_black = True
-                        self.other_player.finishSignal.connect(self.AI_draw)
-                        self.other_player.start()
+                        # 내가 검은색돌이고 PERSON 일 때        
+                        else:
+                            self.player_black = ChoiceOfPlayer(self.gomoku_map, self.player_type, True, self)
+                            
+                        # todo
+                        # self.other_player_type = PERSON
+                        # self.other_player = ChoiceOfPlayer(self.gomoku_map, self.other_player_type, False, self)
+                        # self.other_player.is_black = True
+                        # self.other_player.finishSignal.connect(self.AI_draw)
+                        # self.other_player.start()
                         self.blackLabel.setText(self.name)
                         self.whiteLabel.setText("상대방")
                         self.statusLabel.setText("게임 시작")
                         # if self.player_type == AI:
                         #     print("AI 의 첫 수")
                         #     x, y = self.player.Player.Go(self.gomoku_map, self.is_black, self)
-                        #     self.ai_put_signal.emit(x, y)
+                        #     self.ai_render_signal.emit(x, y)
 
+                    # 내가 하얀색 돌
                     else:
                         self.MY_COLOR = WHITE
                         self.OTHER_COLOR = BLACK
-                        self.is_black = False
+                        
+                        # 내가 하얀색 돌이고 AI 일 때
                         if self.player_type == AI:
-                            self.player = ChoiceOfPlayer(self.gomoku_map, self.player_type, self.is_black, self)
-                            self.player.is_black = True
+                            # self.player.is_black = True
+                            self.player = ChoiceOfPlayer(self.gomoku_map, self.player_type, False, self)
                             self.player.finishSignal.connect(self.AI_draw)
                             if self.step<2:
                                 self.player.start()
-                        self.other_player_type = PERSON
-                        self.other_player = ChoiceOfPlayer(self.gomoku_map, self.other_player_type, True, self)
-                        self.other_player.is_black = False
-                        self.other_player.finishSignal.connect(self.AI_draw)
-                        self.other_player.start()
+                                
+                        # 내가 하얀색 돌이고 PERSON 일 때
+                        else:
+                            self.player = ChoiceOfPlayer(self.gomoku_map, self.player_type, False, self)
+                            
+                        # todo
+                        # self.other_player_type = PERSON
+                        # self.other_player = ChoiceOfPlayer(self.gomoku_map, self.other_player_type, True, self)
+                        # self.other_player.is_black = False
+                        # self.other_player.finishSignal.connect(self.AI_draw)
+                        # self.other_player.start()
                         self.blackLabel.setText("상대방")
                         self.whiteLabel.setText(self.name)
                         self.statusLabel.setText("게임 시작")
                     self.INIT = False
-            else:
+            else: # not init
                 ret_tuple = self.gomoku.update_or_end()
                 success, command, turn, data = ret_tuple    # bool, int, int, bytes 형태, 맨 첫 변수는 성공 실패 유무
                 self.time_signal.emit(TIME_START)
                 if command == CMD_UPDATE: # update 명령
-                    x = int((data & 0b11110000) >> 4)
-                    y = int(data & 0b00001111)
-                    print(f'x : {x}, y : {y}')
+                    i = int((data & 0b11110000) >> 4)
+                    j = int(data & 0b00001111)
+                    x = i - 1
+                    y = j - 1
                     if turn == 0: # 내 차례
-                        print("update: 상대가 둔 돌 렌더, 내 차례")
-                        self.other_put_signal.emit(x, y)
-                        if self.player_type == AI:
-                            print("AI가 이제 둬야함")
+                        print(f'update: 상대가 둔 돌 x : {x}, y : {y}')
+                        # 상대가 둔 x, y 를 gomoku_map 에 넣어줘야 함
+                        # self.other_render_signal.emit(x, y)
+                        print("내가 둘 차례")
+                        if self.player_type == AI: # 내가 AI 면 
                             if self.OTHER_COLOR == BLACK: # 상대가 검은 돌이면
-                                # self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기
-                                self.put_signal.emit(x, y, BLACK)
-                                self.player.my_is_black = False
+                                # 상대가 둔 돌 board 에 넣기
+                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, BLACK)
                                 self.player.is_black = False
                                 # x, y = self.player.Player.Go(self.gomoku_map, self.is_black, self)
-                                # self.ai_put_signal.emit(x, y)
+                                # self.ai_render_signal.emit(x, y)
                             else: # 상대가 하얀 돌이면
-                                # self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기
-                                self.put_signal.emit(x, y, WHITE)
-                                self.player.my_is_black = True
+                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, WHITE)
                                 self.player.is_black = True
                                 # x, y = self.player.Player.Go(self.gomoku_map, self.is_black, self)
-                                # self.ai_put_signal.emit(x, y)
-                        else: # 상대 차례
+                                # self.ai_render_signal.emit(x, y)
+                        else: # 내가 사람이면
+                            # 일단 고려 x
+                            # render 만 하면 됨
                             if self.OTHER_COLOR == BLACK: # 상대가 검은 돌이면
-                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기
-                                self.put_signal.emit(x, y, BLACK)
+                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, BLACK)
                             else: # 상대가 하얀 돌이면
-                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기
-                                self.put_signal.emit(x, y, WHITE)
+                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, WHITE)
                     else: # 상대 차례
-                        print("update: 내가 둔 돌 렌더")
+                        # 내가 둔 돌에 대해서 render 해줌
+                        print(f'update: 내가 둔 돌 x : {x}, y : {y}')
                         if self.MY_COLOR == BLACK: # 내가 검은 돌이면
-                            self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기
-                        #     self.put_signal.emit(x, y, BLACK)
+                            self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
+                            self.render_signal.emit(x, y, BLACK)
                         else: # 내가 하얀 돌이면
                             self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기
-                        #     self.put_signal.emit(x, y, WHITE)
+                            self.render_signal.emit(x, y, WHITE)
                 if command == CMD_END: # end 명령
                     self.time_signal.emit(TIME_STOP)
                     self.GAME_DONE = True
@@ -379,14 +396,16 @@ class Game(QMainWindow):
                         elif data == 1: # 시간초과로 인해
                             self.end_signal.emit("패배 (시간초과)")
                         else: # 상대가 오목 완성
-                            x = int((data & 0b11110000) >> 4)
-                            y = int(data & 0b00001111)
+                            i = int((data & 0b11110000) >> 4)
+                            j = int(data & 0b00001111)
+                            x = i - 1
+                            y = j - 1
                             if self.OTHER_COLOR == BLACK: # 상대가 검은 돌이면
-                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기
-                                self.put_signal.emit(x, y, BLACK)
+                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, BLACK)
                             else: # 상대가 하얀 돌이면
-                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기
-                                self.put_signal.emit(x, y, WHITE)
+                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, WHITE)
                             self.end_signal.emit("패배 (상대 오목 완성)")
                     else: # 승리
                         if data == 0: # 오류(금수 등)로 인해
@@ -394,14 +413,16 @@ class Game(QMainWindow):
                         elif data == 1: # 시간초과로 인해
                             self.end_signal.emit("승리 (상대 시간초과)")
                         else: # 오목 완성
-                            x = int((data & 0b11110000) >> 4)
-                            y = int(data & 0b00001111)
+                            i = int((data & 0b11110000) >> 4)
+                            j = int(data & 0b00001111)
+                            x = i - 1
+                            y = j - 1
                             if self.MY_COLOR == BLACK: # 내가 검은 돌이면
-                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기
-                                self.put_signal.emit(x, y, BLACK)
+                                self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, BLACK)
                             else: # 내가 하얀 돌이면
-                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기
-                                self.put_signal.emit(x, y, WHITE)
+                                self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
+                                self.render_signal.emit(x, y, WHITE)
                             self.end_signal.emit("승리 (오목 완성)")
                             
     def timerThread(self):
@@ -526,7 +547,6 @@ class Game(QMainWindow):
 
         return False
 
-
     def AI_draw(self, i, j):
         if self.step != -1:
             self.draw(i, j)# AI
@@ -540,15 +560,13 @@ class Game(QMainWindow):
 
         if self.is_black_do == True:
             # self.pieces[self.step].setPixmap(self.black)
-            self.is_black_do = False
             self.gomoku_map.draw_xy(i, j, BLACK)
-            self.put_signal.emit(i, j, BLACK)
+            self.render_signal.emit(i, j, BLACK)
             # self.who.setText('WHITE Player is Going...')
         else:
             # self.pieces[self.step].setPixmap(self.white)
-            self.is_black_do = True
             self.gomoku_map.draw_xy(i, j, WHITE)
-            self.put_signal.emit(i, j, WHITE)
+            self.render_signal.emit(i, j, WHITE)
             # self.who.setText('BLACK Player is Going...')
 
         print(self.step)
