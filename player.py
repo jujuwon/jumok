@@ -1,10 +1,7 @@
-from chessboard import ChessBoard
-from AI import MinMax,MinMax_smallset,MinMax_best
-from MCTS import MCTS,MCTS_better
-#from ai import searcher
+from minmax import MinMax,MinMax_smallset,MinMax_best
 import time
 
-from const_set import *
+from jconst import *
 import random
 import sys
 from PyQt5 import QtCore, QtGui
@@ -19,7 +16,7 @@ class ChoiceOfPlayer(QtCore.QThread):
     def __init__(self,board,player_type,my_is_black,parent=None):
         super(ChoiceOfPlayer,self).__init__()
         # type 을 바꿔서 어떤 AI 쓸지 고를 수 있음
-        self.type = 1
+        self.type = player_type
         self.board = board
         self.my_is_black = my_is_black
         self.is_black = True
@@ -36,30 +33,40 @@ class ChoiceOfPlayer(QtCore.QThread):
 
     def run(self):
         while(1):
+            print("player->run->while")
             time.sleep(0.5)
+            print(f'self.my_is_black {self.my_is_black}, self.is_black {self.is_black}')
 
             if self.my_is_black == self.is_black:
-                if self.my_is_black == True:
-                    self.parent.mouse_point.setPixmap(self.parent.black)
-                else:
-                    self.parent.mouse_point.setPixmap(self.parent.white)
+                # if self.my_is_black == True:
+                #     self.parent.mouse_point.setPixmap(self.parent.black)
+                # else:
+                #     self.parent.mouse_point.setPixmap(self.parent.white)
                 not_empty = True
                 while(not_empty):
+                    print("player->run->while->while")
                     #print("my_is_black:" + str(self.my_is_black))
-                    i,j = self.Player.Go(self.parent.chessboard,self.is_black,self.parent)
+                    i,j = self.Player.Go(self.parent.gomoku_map,self.is_black,self.parent)
                     
                     if not i is None and not j is None:
-                        if self.parent.chessboard.get_xy_on_logic_state(i,j) == EMPTY:
+                        if self.parent.gomoku_map.get_xy_on_logic_state(i,j) == EMPTY:
+                            print('not_empty FALSE')    
                             not_empty = False
 
-                
-
+                print(f'i : {i} j: {j}')
+                if self.my_is_black == True:
+                    self.parent.put_signal.emit(i, j, BLACK)
+                else:
+                    self.parent.put_signal.emit(i, j, WHITE)
+                self.parent.gomoku.put(i, j)
                 self.finishSignal.emit(i, j)
+                # is_black 이랑 my_is_black 이 다르게 만들어줌
+                # 같아지면 ai 동작?
                 self.is_black = not self.is_black
                 if self.my_is_black == True:
-                    self.parent.player_white.is_black = False
+                    self.parent.is_black = False
                 else:
-                    self.parent.player_black.is_black = True
+                    self.parent.is_black = True
 
 class HumanPlayer():
     def __init__(self, board,is_black):
@@ -70,10 +77,16 @@ class HumanPlayer():
         self.board = board
         self.Going = True
         parent.Going = True
+        print("Go() 실행")
         while(parent.Going):
+            print("human->Go->while")
             time.sleep(0.1)
 
-        i, j = self.coordinate_transform_pixel2map(parent.x,parent.y)
+        print(f'otherX : {parent.otherX} otherY : {parent.otherY}')
+        print("human->Go->i, j")
+        # i, j = self.coordinate_transform_pixel2map(parent.otherX,parent.otherY)
+        i, j = parent.otherX, parent.otherY
+        print(f'i : {i} j: {j}')
         return i,j
 
     def coordinate_transform_pixel2map(self, x, y):
