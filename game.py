@@ -65,6 +65,7 @@ class Game(QMainWindow):
     end_signal = QtCore.pyqtSignal(str)
     time_signal = QtCore.pyqtSignal(int)
     other_render_signal = QtCore.pyqtSignal(int, int)
+    log_signal = QtCore.pyqtSignal(str)
 
     def __init__(self, parent):
         super(Game, self).__init__(parent)
@@ -77,6 +78,8 @@ class Game(QMainWindow):
         self.port = "1234"
         self.is_black_do = True
         self.step = 0
+        self.player_type = AI
+        self.log = ""
         
         # 오목판 세팅
         pixmapBoard = QPixmap()
@@ -142,6 +145,7 @@ class Game(QMainWindow):
         self.personRb.clicked.connect(self.selectRadioSlot)
         self.aiRb.clicked.connect(self.selectRadioSlot)
         self.other_render_signal.connect(self.recvOtherPut)
+        self.log_signal.connect(self.log_slot)
         # self.ai_render_signal.connect(self.map_clicked)
         #self.label_test.clicked.connect(self.label_test_clicked)
         
@@ -156,11 +160,16 @@ class Game(QMainWindow):
             self.player_type = PERSON
         else:
             self.player_type = AI
-        
+            
+    
+    def log_slot(self, msg):
+        self.log = msg
+        self.logLabel.setText(self.log)
+            
     # 싱글플레이 slot
     @QtCore.pyqtSlot(int)
     def singlePlaySlot(self, order):
-        print("order : ", order)
+        # print("order : ", order)
         stone = ""
         if order == 0:
             self.order = BLACK
@@ -217,7 +226,7 @@ class Game(QMainWindow):
         
     # 사용자 돌 클릭 slot
     def map_clicked(self, i, j):
-        print("내가 둔 수 : ", i, j)
+        # print("내가 둔 수 : ", i, j)
         x = i + 1
         y = j + 1
         self.gomoku.put(x, y)
@@ -282,7 +291,7 @@ class Game(QMainWindow):
                 ret_tuple = self.gomoku.update_or_end()
                 success, command, turn, data = ret_tuple
                 if command == CMD_UPDATE: # update 명령
-                    print("update: init")
+                    self.log_signal.emit("init 완료")
                     # 내가 검은색 돌
                     if turn == 0:
                         self.MY_COLOR = BLACK
@@ -351,10 +360,10 @@ class Game(QMainWindow):
                     x = i - 1
                     y = j - 1
                     if turn == 0: # 내 차례
-                        print(f'update: 상대가 둔 돌 x : {x}, y : {y}')
+                        msg = f'상대가 둔 돌 x : {x}, y : {y}'
+                        self.log_signal.emit(msg)
                         # 상대가 둔 x, y 를 gomoku_map 에 넣어줘야 함
                         # self.other_render_signal.emit(x, y)
-                        print("내가 둘 차례")
                         if self.player_type == AI: # 내가 AI 면 
                             if self.OTHER_COLOR == BLACK: # 상대가 검은 돌이면
                                 # 상대가 둔 돌 board 에 넣기
@@ -380,7 +389,9 @@ class Game(QMainWindow):
                                 self.render_signal.emit(x, y, WHITE)
                     else: # 상대 차례
                         # 내가 둔 돌에 대해서 render 해줌
-                        print(f'update: 내가 둔 돌 x : {x}, y : {y}')
+                        msg = f'내가 둔 돌 x : {x}, y : {y}'
+                        self.log_signal.emit(msg)
+
                         if self.MY_COLOR == BLACK: # 내가 검은 돌이면
                             self.gomoku_map.draw_xy(x, y, BLACK) # 검은 돌 두기 render_signal 에서 이미 draw
                             self.render_signal.emit(x, y, BLACK)
@@ -395,6 +406,8 @@ class Game(QMainWindow):
                             self.end_signal.emit("패배 (금수 등 오류 발생)")
                         elif data == 1: # 시간초과로 인해
                             self.end_signal.emit("패배 (시간초과)")
+                        elif data == 2: # 무승부
+                            self.end_signal.emit("무승부")
                         else: # 상대가 오목 완성
                             i = int((data & 0b11110000) >> 4)
                             j = int(data & 0b00001111)
@@ -407,11 +420,13 @@ class Game(QMainWindow):
                                 self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
                                 self.render_signal.emit(x, y, WHITE)
                             self.end_signal.emit("패배 (상대 오목 완성)")
-                    else: # 승리
+                    elif turn == 1: # 승리
                         if data == 0: # 오류(금수 등)로 인해
                             self.end_signal.emit("승리 (상대의 금수 등 오류)")
                         elif data == 1: # 시간초과로 인해
                             self.end_signal.emit("승리 (상대 시간초과)")
+                        elif data == 2: # 무승부
+                            self.end_signal.emit("무승부")
                         else: # 오목 완성
                             i = int((data & 0b11110000) >> 4)
                             j = int(data & 0b00001111)
@@ -424,6 +439,7 @@ class Game(QMainWindow):
                                 self.gomoku_map.draw_xy(x, y, WHITE) # 하얀 돌 두기 render_signal 에서 이미 draw
                                 self.render_signal.emit(x, y, WHITE)
                             self.end_signal.emit("승리 (오목 완성)")
+                        
                             
     def timerThread(self):
         self.t = 15
@@ -569,7 +585,7 @@ class Game(QMainWindow):
             self.render_signal.emit(i, j, WHITE)
             # self.who.setText('BLACK Player is Going...')
 
-        print(self.step)
+        # print(self.step)
 
         # self.pieces[self.step].setGeometry(x, y, PIECE, PIECE)
 

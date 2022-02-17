@@ -43,15 +43,18 @@ class ChoiceOfPlayer(QtCore.QThread):
                 #     self.parent.mouse_point.setPixmap(self.parent.white)
                 not_empty = True
                 while(not_empty):
-                    print("MINMAX 계산중 ...")
+                    self.parent.log_signal.emit("MINMAX 계산중 ...")
                     #print("my_is_black:" + str(self.my_is_black))
                     i,j = self.Player.Go(self.parent.gomoku_map,self.is_black,self.parent)
                     
                     if not i is None and not j is None:
+                        # todo
+                        # self.is_black 이 True 면 검은돌이라는 뜻
+                        # 금수 검사를 해야 함
+                        
                         if self.parent.gomoku_map.get_xy_on_logic_state(i,j) == EMPTY:
                             not_empty = False
 
-                print(f'i : {i} j: {j}')
                 # if self.my_is_black == True:
                 #     self.parent.render_signal.emit(i, j, BLACK)
                 # else:
@@ -77,16 +80,12 @@ class HumanPlayer():
         self.board = board
         self.Going = True
         parent.Going = True
-        print("Go() 실행")
         while(parent.Going):
             print("human->Go->while")
             time.sleep(0.1)
 
-        print(f'otherX : {parent.otherX} otherY : {parent.otherY}')
-        print("human->Go->i, j")
         # i, j = self.coordinate_transform_pixel2map(parent.otherX,parent.otherY)
         i, j = parent.otherX, parent.otherY
-        print(f'i : {i} j: {j}')
         return i,j
 
     def coordinate_transform_pixel2map(self, x, y):
@@ -103,7 +102,6 @@ class HumanPlayer():
 class AIPlayer_1():
     def __init__(self,board,is_black):
         self.ai = MinMax(is_black,1)
-        print('AI_1')
 
     def Go(self,board,is_black,parent):
         result = self.ai.get_move(board)
