@@ -6150,48 +6150,15 @@
      </property>
     </widget>
    </widget>
-   <widget class="QScrollArea" name="logScroll">
+   <widget class="QTextBrowser" name="logLabel">
     <property name="geometry">
      <rect>
       <x>900</x>
-      <y>450</y>
-      <width>271</width>
-      <height>151</height>
+      <y>440</y>
+      <width>281</width>
+      <height>411</height>
      </rect>
     </property>
-    <property name="widgetResizable">
-     <bool>true</bool>
-    </property>
-    <widget class="QWidget" name="scrollAreaWidgetContents">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>0</y>
-       <width>269</width>
-       <height>149</height>
-      </rect>
-     </property>
-     <widget class="QLabel" name="logLabel">
-      <property name="geometry">
-       <rect>
-        <x>13</x>
-        <y>14</y>
-        <width>241</width>
-        <height>121</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

@@ -163,8 +163,7 @@ class Game(QMainWindow):
             
     
     def log_slot(self, msg):
-        self.log = msg
-        self.logLabel.setText(self.log)
+        self.logLabel.append(msg)
             
     # 싱글플레이 slot
     @QtCore.pyqtSlot(int)
